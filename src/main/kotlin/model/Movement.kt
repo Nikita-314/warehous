@@ -1,14 +1,18 @@
 package model
 
 data class Movement(
-    val inventoryId: String, // Какое оборудование перемещали
+    val movementType: MovementType,
+    val inventoryId: String,
+    val typeName: String,
+    val serialNumber: String?,
+    val quantity: Int,
     val date: String,
     val documentNumber: String,
-    //val fromGroup: String, // Откуда передали
-    //val toGroup: String, // Куда передали
-    val source: String, // Откуда / Источник
-    val destination: String, // Куда / Получатель / Пункт назначения
-    val location: String?, // Объект эксплуатации
-    val transferredBy: String, // Кто передал
-    val acceptedBy: String // Кто принял
+    val source: String,
+    val destination: String,
+    val location: String?,
+    val transferredBy: String,
+    val acceptedBy: String,
+    val completenessStatus: CompletenessStatus,
+    val missingParts: String?
 )

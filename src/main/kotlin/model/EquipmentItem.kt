@@ -8,5 +8,6 @@ data class EquipmentItem(
     val status: EquipmentStatus,
     val currentGroup: String?,
     val currentLocation: String?,
-    val completenessStatus: CompletenessStatus
+    val completenessStatus: CompletenessStatus,
+    val missingParts: String? = null
 )

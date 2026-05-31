@@ -7,27 +7,21 @@ import service.GroupCatalogService
 import service.EquipmentService
 import kotlin.time.Clock
 import excel.ExcelStorage
+import ui.ConsoleMenu
 
 
 fun main() {
-
+    val storage = ExcelStorage()
     val equipmentService = EquipmentService()
 
-    equipmentService.addEquipment(
-        typeName = "Батарейка AA",
-        serialNumber = null,
-        quantity = 9
+    equipmentService.loadInitialData(
+        loadedItems = storage.loadEquipment(),
+        loadedMovements = storage.loadMovements()
     )
-
-    equipmentService.addEquipment(
-        typeName = "Батарейка AA",
-        serialNumber = "8776",
-        quantity = 10
+    val menu = ConsoleMenu(
+        equipmentService = equipmentService,
+        storage = storage
     )
+    menu.start()
 
-    for (item in equipmentService.getAllItems()) {
-        println(
-            "${item.inventoryId} | ${item.typeName} | ${item.serialNumber} | ${item.quantity}"
-        )
-    }
 }
