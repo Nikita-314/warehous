@@ -249,4 +249,43 @@ class EquipmentService {
 
         println("Оборудование с номером $inventoryId не найдено")
     }
+
+    fun validateDataIntegrity(): Int {
+        val existingInventoryIds = mutableSetOf<String>()
+        var problemCount = 0
+
+        for (item in items) {
+            existingInventoryIds.add(item.inventoryId)
+        }
+        for (movement in movements) {
+            if (!existingInventoryIds.contains(movement.inventoryId)) {
+                problemCount++
+                println("ВНИМАНИЕ: В истории есть движение по ${movement.inventoryId}, но такого оборудования нет в списке оборудования")
+            }
+        }
+        return problemCount
+    }
+
+    fun editEquipment(
+        inventoryId: String,
+        newTypeName: String,
+        newSerialNumber: String?,
+        newCompletenessStatus: CompletenessStatus,
+        newMissingParts: String?
+    ): Boolean {
+        for (index in items.indices) {
+            val item = items[index]
+            if (item.inventoryId == inventoryId) {
+                val updatedItem = item.copy(
+                    typeName = newTypeName,
+                    serialNumber = newSerialNumber,
+                    completenessStatus = newCompletenessStatus,
+                    missingParts = newMissingParts
+                )
+                items[index] = updatedItem
+                return true
+            }
+        }
+        return false
+    }
 }

@@ -18,6 +18,13 @@ fun main() {
         loadedItems = storage.loadEquipment(),
         loadedMovements = storage.loadMovements()
     )
+
+    equipmentService.loadInitialData(
+        loadedItems = storage.loadEquipment(),
+        loadedMovements = storage.loadMovements()
+    )
+    equipmentService.validateDataIntegrity()
+
     val menu = ConsoleMenu(
         equipmentService = equipmentService,
         storage = storage

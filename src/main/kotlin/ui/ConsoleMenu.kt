@@ -11,6 +11,7 @@ class ConsoleMenu(
 ) {
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
+
     fun start() {
         while (true) {
             println()
@@ -23,6 +24,8 @@ class ConsoleMenu(
             println("6. Вернуть на склад")
             println("7. Показать остатки")
             println("8. Списать оборудование")
+            println("9. Проверить целостность данных")
+            println("10. Редактировать оборудование")
             println("0. Выход")
             print("Выберите действие: ")
 
@@ -37,6 +40,9 @@ class ConsoleMenu(
                 "6" -> returnEquipment()
                 "7" -> showStockBalance()
                 "8" -> writeOffEquipment()
+                "9" -> validateData()
+                "10" -> editEquipment()
+
                 "0" -> {
                     println("Выход из программы")
                     return
@@ -304,6 +310,92 @@ class ConsoleMenu(
         )
 
         println("Списание завершено")
+    }
+
+    private fun validateData() {
+        println()
+        println("Проверка целостности данных:")
+        val problemCount = equipmentService.validateDataIntegrity()
+        println("Проверка завершена. Найдено проблем: $problemCount")
+    }
+
+    private fun editEquipment() {
+        println()
+
+        print("Введите инвентарный номер: ")
+        val inventoryId = readln()
+
+        val item = equipmentService.findEquipmentById(inventoryId)
+
+        if (item == null) {
+            println("Оборудование с номером $inventoryId не найдено")
+            return
+        }
+
+        println("Текущее название: ${item.typeName}")
+        print("Новое название. Если не менять, нажмите Enter: ")
+        val typeNameInput = readln()
+
+        val newTypeName =
+            if (typeNameInput.isBlank()) item.typeName else typeNameInput
+
+        println("Текущий серийный номер: ${item.serialNumber ?: "-"}")
+        print("Новый серийный номер. Если не менять, нажмите Enter: ")
+        val serialInput = readln()
+
+        val newSerialNumber =
+            if (serialInput.isBlank()) item.serialNumber else serialInput
+
+        println("Текущая комплектность: ${item.completenessStatus.title}")
+        println("1. Комплект")
+        println("2. Некомплект")
+        print("Выберите комплектность. Если не менять, нажмите Enter: ")
+        val completenessInput = readln()
+
+        val newCompletenessStatus =
+            when (completenessInput) {
+                "1" -> model.CompletenessStatus.COMPLETE
+                "2" -> model.CompletenessStatus.INCOMPLETE
+                else -> item.completenessStatus
+            }
+
+        println("Сейчас отсутствует: ${item.missingParts ?: "-"}")
+        print("Что отсутствует. Если не менять, нажмите Enter: ")
+        val missingPartsInput = readln()
+
+        val newMissingParts =
+            if (missingPartsInput.isBlank()) item.missingParts else missingPartsInput
+
+        val success = equipmentService.editEquipment(
+            inventoryId = inventoryId,
+            newTypeName = newTypeName,
+            newSerialNumber = newSerialNumber,
+            newCompletenessStatus = newCompletenessStatus,
+            newMissingParts = newMissingParts
+        )
+
+        if (success) {
+
+            storage.saveEquipment(
+                equipmentService.getAllItems()
+            )
+
+            storage.saveMovements(
+                equipmentService.getAllMovements()
+            )
+
+            storage.saveGroupSheets(
+                items = equipmentService.getAllItems(),
+                movements = equipmentService.getAllMovements()
+            )
+
+            println("Оборудование отредактировано")
+
+        } else {
+
+            println("Не удалось отредактировать оборудование")
+
+        }
     }
 }
 

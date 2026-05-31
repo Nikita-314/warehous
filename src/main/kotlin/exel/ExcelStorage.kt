@@ -274,14 +274,14 @@ class ExcelStorage(
                 continue
             }
             
-            val typeName = row.getCell(1).stringCellValue
-            val serialNumberText = row.getCell(2).stringCellValue
-            val quantity = row.getCell(3).numericCellValue.toInt()
-            val statusText = row.getCell(4).stringCellValue
-            val currentGroupText = row.getCell(5).stringCellValue
-            val currentLocationText = row.getCell(6).stringCellValue
-            val completenessText = row.getCell(7).stringCellValue
-            val missingPartsText = row.getCell(8).stringCellValue
+            val typeName = readString(row, 1)
+            val serialNumberText = readString(row, 2)
+            val quantity = readInt(row, 3)
+            val statusText = readString(row, 4)
+            val currentGroupText = readString(row, 5)
+            val currentLocationText = readString(row, 6)
+            val completenessText = readString(row, 7)
+            val missingPartsText = readString(row, 8)
 
             val item = EquipmentItem(
                 inventoryId = inventoryId,
@@ -343,7 +343,13 @@ class ExcelStorage(
             val missingPartsText = row.getCell(13).stringCellValue
 
             val movement = Movement(
-                movementType = if (movementTypeText == "Передача") MovementType.TRANSFER else MovementType.RECEIPT,
+                movementType = when (movementTypeText) {
+                    "Поступление" -> MovementType.RECEIPT
+                    "Передача" -> MovementType.TRANSFER
+                    "Возврат" -> MovementType.RETURN
+                    "Списание" -> MovementType.WRITE_OFF
+                    else -> MovementType.TRANSFER
+                },
                 inventoryId = inventoryId,
                 typeName = typeName,
                 serialNumber = if (serialNumberText.isBlank()) null else serialNumberText,
@@ -450,5 +456,29 @@ class ExcelStorage(
         }
 
         return lastMovement
+    }
+
+    private fun readString(
+        row: org.apache.poi.ss.usermodel.Row,
+        // cellIndex — номер ячейки
+        cellIndex: Int
+    ) : String {
+        val cell = row.getCell(cellIndex)
+        if (cell == null) {
+            return ""
+        }
+        return cell.toString()
+    }
+
+    private fun readInt(
+        row: org.apache.poi.ss.usermodel.Row,
+        cellIndex: Int
+    ): Int {
+        val cell = row.getCell(cellIndex)
+        if (cell == null) {
+            return 0
+        }
+        // toDoubleOrNull() — попытаться превратить в число, если не получилось — вернуть null
+        return cell.toString().toDoubleOrNull()?.toInt() ?: 0
     }
 }
