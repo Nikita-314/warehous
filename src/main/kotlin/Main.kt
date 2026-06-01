@@ -16,6 +16,36 @@ fun main() {
 
     val loadedSettings = storage.loadSettings()
 
+    val settings =
+        if (loadedSettings == null) {
+            println("Первый запуск программы. Нужно настроить названия.")
+
+            print("Как назвать главное место учёта? Например: Склад, Лаборатория: ")
+            val warehouseTitle = readln()
+
+            print("Как назвать учитываемые объекты? Например: Оборудование, Материалы: ")
+            val equipmentTitle = readln()
+
+            print("Как назвать получателей? Например: Группа, Техпомещение: ")
+            val groupTitle = readln()
+
+            print("Как назвать местоположение? Например: Объект, Город: ")
+            val locationTitle = readln()
+
+            val newSettings = AppSettings(
+                warehouseTitle = warehouseTitle,
+                equipmentTitle = equipmentTitle,
+                groupTitle = groupTitle,
+                locationTitle = locationTitle
+            )
+
+            storage.saveSettings(newSettings)
+
+            newSettings
+        } else {
+            loadedSettings
+        }
+
     val equipmentService = EquipmentService()
 
     equipmentService.loadInitialData(
@@ -28,7 +58,7 @@ fun main() {
     val menu = ConsoleMenu(
         equipmentService = equipmentService,
         storage = storage,
-        settings = loadedSettings
+        settings = settings
     )
 
     menu.start()

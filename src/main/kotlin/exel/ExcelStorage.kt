@@ -535,11 +535,11 @@ class ExcelStorage(
         workbook.close()
     }
 
-    fun loadSettings(): AppSettings {
+    fun loadSettings(): AppSettings? {
         val file = File(fileName)
 
         if (!file.exists()) {
-            return AppSettings()
+            return null
         }
 
         val inputStream = FileInputStream(file)
@@ -550,7 +550,7 @@ class ExcelStorage(
         if (sheet == null) {
             workbook.close()
             inputStream.close()
-            return AppSettings()
+            return null
         }
 
         var warehouseTitle = "Склад"

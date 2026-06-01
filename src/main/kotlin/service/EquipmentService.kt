@@ -331,4 +331,64 @@ class EquipmentService {
         println("Оборудование с номером $inventoryId не найдено")
         return false
     }
+
+    fun restoreEquipmentFromHistory(
+        inventoryId: String
+    ): Boolean {
+
+        for (item in items) {
+            if (item.inventoryId == inventoryId) {
+                println("Оборудование уже существует")
+                return false
+            }
+        }
+
+        var lastMovement: Movement? = null
+
+        for (movement in movements) {
+            if (movement.inventoryId == inventoryId) {
+                lastMovement = movement
+            }
+        }
+
+        if (lastMovement == null) {
+            println("История для $inventoryId не найдена")
+            return false
+        }
+        val restoredStatus =
+            when (lastMovement.movementType) {
+                MovementType.WRITE_OFF -> EquipmentStatus.WRITTEN_OFF
+                else -> EquipmentStatus.IN_GROUP
+            }
+
+        val restoredGroup =
+            when (lastMovement.movementType) {
+                MovementType.WRITE_OFF -> null
+                else -> lastMovement.destination
+            }
+
+        val restoredLocation =
+            when (lastMovement.movementType) {
+                MovementType.WRITE_OFF -> null
+                else -> lastMovement.location
+            }
+
+        val restoredItem = EquipmentItem(
+            inventoryId = lastMovement.inventoryId,
+            typeName = lastMovement.typeName,
+            serialNumber = lastMovement.serialNumber,
+            quantity = lastMovement.quantity,
+            status = restoredStatus,
+            currentGroup = restoredGroup,
+            currentLocation = restoredLocation,
+            completenessStatus = lastMovement.completenessStatus,
+            missingParts = lastMovement.missingParts
+        )
+
+        items.add(restoredItem)
+
+        println("Оборудование $inventoryId восстановлено из истории")
+
+        return true
+    }
 }

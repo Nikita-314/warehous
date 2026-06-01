@@ -9,7 +9,7 @@ import model.AppSettings
 class ConsoleMenu(
     private val equipmentService: EquipmentService,
     private val storage: ExcelStorage,
-    private val settings: AppSettings
+    private var settings: AppSettings
 ) {
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
@@ -18,19 +18,21 @@ class ConsoleMenu(
         while (true) {
             println()
             println("=== ${settings.warehouseTitle.uppercase()} ===")
-            println("1. Показать оборудование")
+            println("1. Показать ${settings.equipmentTitle.lowercase()}")
             println("2. Показать историю движения")
-            println("3. Добавить оборудование")
-            println("4. Передать оборудование")
-            println("5. Найти оборудование")
-            println("6. Вернуть на склад")
+            println("3. Добавить ${settings.equipmentTitle.lowercase()}")
+            println("4. Передать ${settings.equipmentTitle.lowercase()}")
+            println("5. Найти ${settings.equipmentTitle.lowercase()}")
+            println("6. Вернуть ${settings.equipmentTitle.lowercase()} на ${settings.warehouseTitle.lowercase()}")
             println("7. Показать остатки")
-            println("8. Списать оборудование")
+            println("8. Списать ${settings.equipmentTitle.lowercase()}")
             println("9. Проверить целостность данных")
-            println("10. Редактировать оборудование")
-            println("11. Удалить ошибочно созданное оборудование")
+            println("10. Редактировать ${settings.equipmentTitle.lowercase()}")
+            println("11. Удалить ошибочно созданное ${settings.equipmentTitle.lowercase()}")
             println("12. Поиск по названию")
-            println("13. Показать оборудование группы")
+            println("13. Показать ${settings.equipmentTitle.lowercase()} ${settings.groupTitle.lowercase()}")
+            println("14. Восстановить ${settings.equipmentTitle.lowercase()} из истории")
+            println("15. Управление настройками")
             println("0. Выход")
             print("Выберите действие: ")
 
@@ -50,6 +52,8 @@ class ConsoleMenu(
                 "11" -> deleteEquipment()
                 "12" -> searchByName()
                 "13" -> showGroupEquipment()
+                "14" -> restoreEquipment()
+                "15" -> editSettings()
 
 
                 "0" -> {
@@ -447,6 +451,58 @@ class ConsoleMenu(
         if (foundCount == 0) {
             println("Оборудование не найдено")
         }
+    }
+
+    private fun restoreEquipment() {
+        println()
+
+        print("Введите инвентарный номер для восстановления: ")
+        val inventoryId = readln()
+
+        val success =
+            equipmentService.restoreEquipmentFromHistory(inventoryId)
+
+        if (success) {
+            saveAll()
+            println("Восстановление завершено")
+        } else {
+            println("Восстановление не выполнено")
+        }
+    }
+
+    private fun editSettings() {
+        println()
+
+        println("Текущие настройки:")
+        println("1. Главное место учёта: ${settings.warehouseTitle}")
+        println("2. Учитываемые объекты: ${settings.equipmentTitle}")
+        println("3. Получатели: ${settings.groupTitle}")
+        println("4. Местоположение: ${settings.locationTitle}")
+
+        print("Новое название главного места учёта. Если не менять, нажмите Enter: ")
+        val warehouseInput = readln()
+
+        print("Новое название учитываемых объектов. Если не менять, нажмите Enter: ")
+        val equipmentInput = readln()
+
+        print("Новое название получателей. Если не менять, нажмите Enter: ")
+        val groupInput = readln()
+
+        print("Новое название местоположения. Если не менять, нажмите Enter: ")
+        val locationInput = readln()
+
+        val newSettings = AppSettings(
+            warehouseTitle = if (warehouseInput.isBlank()) settings.warehouseTitle else warehouseInput,
+            equipmentTitle = if (equipmentInput.isBlank()) settings.equipmentTitle else equipmentInput,
+            groupTitle = if (groupInput.isBlank()) settings.groupTitle else groupInput,
+            locationTitle = if (locationInput.isBlank()) settings.locationTitle else locationInput
+        )
+
+        storage.saveSettings(newSettings)
+
+        settings = newSettings
+
+        println("Настройки сохранены")
     }
 }
 
