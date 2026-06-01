@@ -4,10 +4,12 @@ import excel.ExcelStorage
 import service.EquipmentService
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import model.AppSettings
 
 class ConsoleMenu(
     private val equipmentService: EquipmentService,
-    private val storage: ExcelStorage
+    private val storage: ExcelStorage,
+    private val settings: AppSettings
 ) {
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
@@ -15,7 +17,7 @@ class ConsoleMenu(
     fun start() {
         while (true) {
             println()
-            println("=== СКЛАД ===")
+            println("=== ${settings.warehouseTitle.uppercase()} ===")
             println("1. Показать оборудование")
             println("2. Показать историю движения")
             println("3. Добавить оборудование")
@@ -26,6 +28,9 @@ class ConsoleMenu(
             println("8. Списать оборудование")
             println("9. Проверить целостность данных")
             println("10. Редактировать оборудование")
+            println("11. Удалить ошибочно созданное оборудование")
+            println("12. Поиск по названию")
+            println("13. Показать оборудование группы")
             println("0. Выход")
             print("Выберите действие: ")
 
@@ -42,6 +47,10 @@ class ConsoleMenu(
                 "8" -> writeOffEquipment()
                 "9" -> validateData()
                 "10" -> editEquipment()
+                "11" -> deleteEquipment()
+                "12" -> searchByName()
+                "13" -> showGroupEquipment()
+
 
                 "0" -> {
                     println("Выход из программы")
@@ -71,24 +80,14 @@ class ConsoleMenu(
             quantity = quantity
         )
 
-        storage.saveEquipment(
-            equipmentService.getAllItems()
-        )
-
-        storage.saveMovements(
-            equipmentService.getAllMovements()
-        )
-
-        storage.saveGroupSheets(
-            items = equipmentService.getAllItems(),
-            movements = equipmentService.getAllMovements()
-        )
+        saveAll()
 
         println("Оборудование добавлено и Excel обновлён")
     }
 
     private fun showEquipment() {
         val items = equipmentService.getAllItems()
+        println("Всего записей: ${items.size}")
 
         println()
         println("Оборудование:")
@@ -137,18 +136,7 @@ class ConsoleMenu(
             acceptedBy = "Ответственный"
         )
 
-        storage.saveEquipment(
-            equipmentService.getAllItems()
-        )
-
-        storage.saveMovements(
-            equipmentService.getAllMovements()
-        )
-
-        storage.saveGroupSheets(
-            items = equipmentService.getAllItems(),
-            movements = equipmentService.getAllMovements()
-        )
+        saveAll()
 
         println("Передача завершена")
     }
@@ -175,8 +163,8 @@ class ConsoleMenu(
         println("Название: ${foundItem.typeName}")
         println("Серийный номер: ${foundItem.serialNumber ?: "-"}")
         println("Количество: ${foundItem.quantity}")
-        println("Группа: $group")
-        println("Объект: $location")
+        println("${settings.groupTitle}: $group")
+        println("${settings.locationTitle}: $location")
         println("Комплектность: ${foundItem.completenessStatus.title}")
         println("Отсутствует: ${foundItem.missingParts ?: "-"}")
         val movementCount = equipmentService.getMovementCount(inventoryId)
@@ -216,18 +204,7 @@ class ConsoleMenu(
             acceptedBy = "Кладовщик"
         )
 
-        storage.saveEquipment(
-            equipmentService.getAllItems()
-        )
-
-        storage.saveMovements(
-            equipmentService.getAllMovements()
-        )
-
-        storage.saveGroupSheets(
-            items = equipmentService.getAllItems(),
-            movements = equipmentService.getAllMovements()
-        )
+        saveAll()
 
         println("Возврат завершён")
     }
@@ -296,18 +273,7 @@ class ConsoleMenu(
             acceptedBy = "Комиссия"
         )
 
-        storage.saveEquipment(
-            equipmentService.getAllItems()
-        )
-
-        storage.saveMovements(
-            equipmentService.getAllMovements()
-        )
-
-        storage.saveGroupSheets(
-            items = equipmentService.getAllItems(),
-            movements = equipmentService.getAllMovements()
-        )
+        saveAll()
 
         println("Списание завершено")
     }
@@ -376,18 +342,7 @@ class ConsoleMenu(
 
         if (success) {
 
-            storage.saveEquipment(
-                equipmentService.getAllItems()
-            )
-
-            storage.saveMovements(
-                equipmentService.getAllMovements()
-            )
-
-            storage.saveGroupSheets(
-                items = equipmentService.getAllItems(),
-                movements = equipmentService.getAllMovements()
-            )
+            saveAll()
 
             println("Оборудование отредактировано")
 
@@ -395,6 +350,102 @@ class ConsoleMenu(
 
             println("Не удалось отредактировать оборудование")
 
+        }
+    }
+
+    private fun deleteEquipment() {
+        println()
+
+        print("Введите инвентарный номер: ")
+        val inventoryId = readln()
+
+        println("ВНИМАНИЕ: удаление разрешено только если по оборудованию нет истории движения.")
+        print("Для подтверждения введите ДА: ")
+        val confirm = readln()
+
+        if (!confirm.equals("ДА", ignoreCase = true)) {
+            println("Удаление отменено")
+            return
+        }
+
+        val success =
+            equipmentService.deleteEquipmentIfNoMovements(inventoryId)
+
+        if (success) {
+            saveAll()
+        }
+    }
+
+    private fun saveAll() {
+        storage.saveEquipment(
+            equipmentService.getAllItems()
+        )
+        storage.saveMovements(
+            equipmentService.getAllMovements()
+        )
+        storage.saveGroupSheets(
+
+            items = equipmentService.getAllItems(),
+            movements = equipmentService.getAllMovements()
+        )
+    }
+
+    private fun searchByName() {
+        println()
+
+        print("Введите часть названия: ")
+        val query = readln()
+
+        val items = equipmentService.getAllItems()
+
+        println()
+        println("Результаты поиска:")
+
+        var foundCount = 0
+
+        for (item in items) {
+            if (item.typeName.contains(query, ignoreCase = true)) {
+                val group = item.currentGroup ?: "Склад"
+                val location = item.currentLocation ?: "-"
+
+                println("${item.inventoryId} | ${item.typeName} | ${group} | ${location}")
+
+                foundCount++
+            }
+        }
+
+        if (foundCount == 0) {
+            println("Ничего не найдено")
+        }
+    }
+
+    private fun showGroupEquipment() {
+        println()
+
+        print("Введите группу: ")
+        val groupName = readln()
+
+        val items = equipmentService.getAllItems()
+
+        println()
+        println("Оборудование группы $groupName:")
+
+        var foundCount = 0
+
+        for (item in items) {
+
+            if (item.currentGroup == groupName) {
+
+                println(
+                    "${item.inventoryId} | ${item.typeName} | ${item.currentLocation ?: "-"}"
+                )
+
+                foundCount++
+            }
+        }
+
+        if (foundCount == 0) {
+            println("Оборудование не найдено")
         }
     }
 }

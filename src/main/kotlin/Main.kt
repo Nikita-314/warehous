@@ -2,6 +2,7 @@ import model.EquipmentItem
 import model.EquipmentStatus
 import model.CompletenessStatus
 import model.Movement
+import model.AppSettings
 import service.EquipmentCatalogService
 import service.GroupCatalogService
 import service.EquipmentService
@@ -12,6 +13,9 @@ import ui.ConsoleMenu
 
 fun main() {
     val storage = ExcelStorage()
+
+    val loadedSettings = storage.loadSettings()
+
     val equipmentService = EquipmentService()
 
     equipmentService.loadInitialData(
@@ -19,16 +23,13 @@ fun main() {
         loadedMovements = storage.loadMovements()
     )
 
-    equipmentService.loadInitialData(
-        loadedItems = storage.loadEquipment(),
-        loadedMovements = storage.loadMovements()
-    )
     equipmentService.validateDataIntegrity()
 
     val menu = ConsoleMenu(
         equipmentService = equipmentService,
-        storage = storage
+        storage = storage,
+        settings = loadedSettings
     )
-    menu.start()
 
+    menu.start()
 }

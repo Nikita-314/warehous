@@ -12,6 +12,7 @@ import model.EquipmentStatus
 import model.CompletenessStatus
 import model.Movement
 import model.MovementType
+import model.AppSettings
 
 
 class ExcelStorage(
@@ -480,5 +481,109 @@ class ExcelStorage(
         }
         // toDoubleOrNull() — попытаться превратить в число, если не получилось — вернуть null
         return cell.toString().toDoubleOrNull()?.toInt() ?: 0
+    }
+
+    fun saveSettings(settings: AppSettings) {
+        val file = File(fileName)
+
+        val workbook =
+            if (file.exists()) {
+                val inputStream = FileInputStream(file)
+                XSSFWorkbook(inputStream)
+            } else {
+                XSSFWorkbook()
+            }
+
+        val sheetName = "Настройки"
+
+        val oldSheet = workbook.getSheet(sheetName)
+        if (oldSheet != null) {
+            val index = workbook.getSheetIndex(oldSheet)
+            workbook.removeSheetAt(index)
+        }
+
+        val sheet = workbook.createSheet(sheetName)
+
+        val headerRow = sheet.createRow(0)
+        headerRow.createCell(0).setCellValue("Ключ")
+        headerRow.createCell(1).setCellValue("Значение")
+
+        sheet.createRow(1).apply {
+            createCell(0).setCellValue("warehouseTitle")
+            createCell(1).setCellValue(settings.warehouseTitle)
+        }
+
+        sheet.createRow(2).apply {
+            createCell(0).setCellValue("equipmentTitle")
+            createCell(1).setCellValue(settings.equipmentTitle)
+        }
+
+        sheet.createRow(3).apply {
+            createCell(0).setCellValue("groupTitle")
+            createCell(1).setCellValue(settings.groupTitle)
+        }
+
+        sheet.createRow(4).apply {
+            createCell(0).setCellValue("locationTitle")
+            createCell(1).setCellValue(settings.locationTitle)
+        }
+
+        val outputStream = FileOutputStream(file)
+        workbook.write(outputStream)
+
+        outputStream.close()
+        workbook.close()
+    }
+
+    fun loadSettings(): AppSettings {
+        val file = File(fileName)
+
+        if (!file.exists()) {
+            return AppSettings()
+        }
+
+        val inputStream = FileInputStream(file)
+        val workbook = XSSFWorkbook(inputStream)
+
+        val sheet = workbook.getSheet("Настройки")
+
+        if (sheet == null) {
+            workbook.close()
+            inputStream.close()
+            return AppSettings()
+        }
+
+        var warehouseTitle = "Склад"
+        var equipmentTitle = "Оборудование"
+        var groupTitle = "Группа"
+        var locationTitle = "Объект"
+
+        for (rowIndex in 1..sheet.lastRowNum) {
+            val row = sheet.getRow(rowIndex)
+
+            if (row == null) {
+                continue
+            }
+
+            val key = readString(row, 0)
+            val value = readString(row, 1)
+
+            when (key) {
+                "warehouseTitle" -> warehouseTitle = value
+                "equipmentTitle" -> equipmentTitle = value
+                "groupTitle" -> groupTitle = value
+                "locationTitle" -> locationTitle = value
+            }
+        }
+
+        workbook.close()
+        inputStream.close()
+
+        return AppSettings(
+            warehouseTitle = warehouseTitle,
+            equipmentTitle = equipmentTitle,
+            groupTitle = groupTitle,
+            locationTitle = locationTitle
+        )
     }
 }

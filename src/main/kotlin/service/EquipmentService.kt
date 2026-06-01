@@ -251,18 +251,37 @@ class EquipmentService {
     }
 
     fun validateDataIntegrity(): Int {
-        val existingInventoryIds = mutableSetOf<String>()
         var problemCount = 0
 
+        val existingInventoryIds = mutableSetOf<String>()
+        val duplicateInventoryIds = mutableSetOf<String>()
+
         for (item in items) {
-            existingInventoryIds.add(item.inventoryId)
+            if (existingInventoryIds.contains(item.inventoryId)) {
+                duplicateInventoryIds.add(item.inventoryId)
+            } else {
+                existingInventoryIds.add(item.inventoryId)
+            }
         }
+
+        for (duplicateId in duplicateInventoryIds) {
+            problemCount++
+
+            println(
+                "ВНИМАНИЕ: Найден дубликат инвентарного номера $duplicateId"
+            )
+        }
+
         for (movement in movements) {
             if (!existingInventoryIds.contains(movement.inventoryId)) {
                 problemCount++
-                println("ВНИМАНИЕ: В истории есть движение по ${movement.inventoryId}, но такого оборудования нет в списке оборудования")
+
+                println(
+                    "ВНИМАНИЕ: В истории есть движение по ${movement.inventoryId}, но такого оборудования нет в списке оборудования"
+                )
             }
         }
+
         return problemCount
     }
 
@@ -286,6 +305,30 @@ class EquipmentService {
                 return true
             }
         }
+        return false
+    }
+    fun deleteEquipmentIfNoMovements(
+        inventoryId: String
+    ): Boolean {
+
+        for (movement in movements) {
+            if (movement.inventoryId == inventoryId) {
+                println("Нельзя удалить $inventoryId: по нему уже есть история движения")
+                return false
+            }
+        }
+
+        for (index in items.indices) {
+            val item = items[index]
+
+            if (item.inventoryId == inventoryId) {
+                items.removeAt(index)
+                println("Оборудование $inventoryId удалено")
+                return true
+            }
+        }
+
+        println("Оборудование с номером $inventoryId не найдено")
         return false
     }
 }
