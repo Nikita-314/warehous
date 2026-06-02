@@ -62,12 +62,22 @@ class EquipmentService {
         documentNumber: String,
         transferredBy: String,
         acceptedBy: String,
-        movementType: MovementType = MovementType.TRANSFER
+        movementType: MovementType = MovementType.TRANSFER,
+        transferQuantity: Int
     ) {
         for (index in items.indices) {
             val item = items[index]
 
             if (item.inventoryId == inventoryId) {
+                if (transferQuantity <= 0) {
+                    println("Количество для передачи должно быть больше 0")
+                    return
+                }
+
+                if (transferQuantity > item.quantity) {
+                    println("Нельзя передать $transferQuantity. Доступно только ${item.quantity}")
+                    return
+                }
 
                 val oldPlace = item.currentGroup ?: "Склад"
                 if (oldPlace == newGroup) {
@@ -80,7 +90,7 @@ class EquipmentService {
                     inventoryId = item.inventoryId,
                     typeName = item.typeName,
                     serialNumber = item.serialNumber,
-                    quantity = item.quantity,
+                    quantity = transferQuantity,
                     date = date,
                     documentNumber = documentNumber,
                     source = oldPlace,
@@ -94,13 +104,31 @@ class EquipmentService {
 
                 movements.add(movement)
 
-                val updatedItem = item.copy(
-                    status = EquipmentStatus.IN_GROUP,
-                    currentGroup = newGroup,
-                    currentLocation = newLocation
-                )
+                if (transferQuantity == item.quantity) {
+                    val updatedItem = item.copy(
+                        status = EquipmentStatus.IN_GROUP,
+                        currentGroup = newGroup,
+                        currentLocation = newLocation
+                    )
 
-                items[index] = updatedItem
+                    items[index] = updatedItem
+                } else {
+                    val remainingItem = item.copy(
+                        quantity = item.quantity - transferQuantity
+                    )
+
+                    items[index] = remainingItem
+
+                    val transferredItem = item.copy(
+                        inventoryId = generateInventoryId(),
+                        quantity = transferQuantity,
+                        status = EquipmentStatus.IN_GROUP,
+                        currentGroup = newGroup,
+                        currentLocation = newLocation
+                    )
+
+                    items.add(transferredItem)
+                }
 
                 if (movementType == MovementType.RETURN) {
                     println("Оборудование $inventoryId возвращено на склад")

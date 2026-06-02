@@ -2,6 +2,7 @@ package ui
 
 import excel.ExcelStorage
 import service.EquipmentService
+import service.DocumentService
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import model.AppSettings
@@ -9,8 +10,9 @@ import model.AppSettings
 class ConsoleMenu(
     private val equipmentService: EquipmentService,
     private val storage: ExcelStorage,
-    private var settings: AppSettings
+    private var settings: AppSettings,
 ) {
+    private val documentService = DocumentService()
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
 
@@ -139,6 +141,12 @@ class ConsoleMenu(
             transferredBy = "Кладовщик",
             acceptedBy = "Ответственный"
         )
+        val lastMovement =
+            equipmentService.getLastMovement(inventoryId)
+
+        if (lastMovement != null) {
+            documentService.createTransferDocument(lastMovement)
+        }
 
         saveAll()
 
