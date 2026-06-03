@@ -35,6 +35,7 @@ class ConsoleMenu(
             println("13. Показать ${settings.equipmentTitle.lowercase()} ${settings.groupTitle.lowercase()}")
             println("14. Восстановить ${settings.equipmentTitle.lowercase()} из истории")
             println("15. Управление настройками")
+            println("16. Управление подразделениями")
             println("0. Выход")
             print("Выберите действие: ")
 
@@ -56,6 +57,7 @@ class ConsoleMenu(
                 "13" -> showGroupEquipment()
                 "14" -> restoreEquipment()
                 "15" -> editSettings()
+                "16" -> manageGroups()
 
 
                 "0" -> {
@@ -102,7 +104,7 @@ class ConsoleMenu(
             val group = item.currentGroup ?: "Склад"
             val location = item.currentLocation ?: "-"
 
-            println("${item.inventoryId} | ${item.typeName} | ${group} | ${location}")
+            println("${item.inventoryId} | ${item.typeName} | ${item.quantity} шт. | ${group} | ${location}")
         }
     }
 
@@ -129,28 +131,36 @@ class ConsoleMenu(
         print("Введите объект: ")
         val location = readln()
 
+        print("Введите количество для передачи: ")
+        val quantity = readln().toInt()
+
         print("Введите номер накладной: ")
         val documentNumber = readln()
 
-        equipmentService.transferEquipment(
+        print("Кто передал: ")
+        val transferredBy = readln()
+
+        print("Кто принял: ")
+        val acceptedBy = readln()
+
+        val movement = equipmentService.transferEquipment(
             inventoryId = inventoryId,
             newGroup = group,
             newLocation = location,
+            transferQuantity = quantity,
             date = LocalDate.now().format(dateFormatter),
             documentNumber = documentNumber,
-            transferredBy = "Кладовщик",
-            acceptedBy = "Ответственный"
+            transferredBy = transferredBy,
+            acceptedBy = acceptedBy
         )
-        val lastMovement =
-            equipmentService.getLastMovement(inventoryId)
 
-        if (lastMovement != null) {
-            documentService.createTransferDocument(lastMovement)
+        if (movement != null) {
+            documentService.createTransferDocument(movement)
+            saveAll()
+            println("Передача завершена")
+        } else {
+            println("Передача не выполнена")
         }
-
-        saveAll()
-
-        println("Передача завершена")
     }
 
     private fun findEquipment() {
@@ -193,11 +203,27 @@ class ConsoleMenu(
         val movements = equipmentService.getAllMovements()
 
         for (movement in movements) {
-            if (movement.inventoryId == inventoryId) {
-                println("${movement.date} | ${movement.movementType.title} | ${movement.source} -> ${movement.destination} | ${movement.documentNumber}")
+
+            if (movement.inventoryId != inventoryId) {
+                continue
             }
+
+            println(
+                "${movement.date} | " +
+                        "${movement.movementType.title} | " +
+                        "${movement.source} -> ${movement.destination} | " +
+                        movement.documentNumber
+            )
+
+            println(
+                "Передал: ${movement.transferredBy} | " +
+                        "Принял: ${movement.acceptedBy}"
+            )
+
+            println()
         }
     }
+
 
     private fun returnEquipment() {
         println()
@@ -208,12 +234,18 @@ class ConsoleMenu(
         print("Введите номер накладной: ")
         val documentNumber = readln()
 
+        print("Кто передал: ")
+        val transferredBy = readln()
+
+        print("Кто принял: ")
+        val acceptedBy = readln()
+
         equipmentService.returnEquipment(
             inventoryId = inventoryId,
             date = LocalDate.now().format(dateFormatter),
             documentNumber = documentNumber,
-            transferredBy = "Ответственный",
-            acceptedBy = "Кладовщик"
+            transferredBy = transferredBy,
+            acceptedBy = acceptedBy
         )
 
         saveAll()
@@ -400,6 +432,9 @@ class ConsoleMenu(
             items = equipmentService.getAllItems(),
             movements = equipmentService.getAllMovements()
         )
+        storage.saveDepartmentNames(
+            equipmentService.getAllGroups()
+        )
     }
 
     private fun searchByName() {
@@ -511,6 +546,57 @@ class ConsoleMenu(
         settings = newSettings
 
         println("Настройки сохранены")
+    }
+
+    private fun manageGroups() {
+        while (true) {
+            println()
+            println("=== Подразделения ===")
+
+            val groups = equipmentService.getAllGroups()
+
+            if (groups.isEmpty()) {
+                println("Справочник пуст")
+            } else {
+                println("Список подразделений:")
+
+                for ((index, group) in groups.withIndex()) {
+                    println("${index + 1}. $group")
+                }
+            }
+
+            println()
+            println("1. Добавить подразделение")
+            println("2. Удалить подразделение")
+            println("0. Назад")
+            print("Выберите действие: ")
+
+            when (readln()) {
+                "1" -> {
+                    print("Введите название нового подразделения: ")
+                    val newGroup = readln()
+                    val success = equipmentService.addGroup(newGroup)
+
+                    if (success) {
+                        saveAll()
+                    }
+                }
+
+                "2" -> {
+                    print("Введите название подразделения для удаления: ")
+                    val groupName = readln()
+                    val success = equipmentService.deleteGroup(groupName)
+
+                    if (success) {
+                        saveAll()
+                    }
+                }
+
+                "0" -> return
+
+                else -> println("Неизвестная команда")
+            }
+        }
     }
 }
 

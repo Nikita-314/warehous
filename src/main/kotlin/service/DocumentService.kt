@@ -33,20 +33,21 @@ class DocumentService(
         val sheet = workbook.getSheetAt(0)
 
         setText(sheet, "CL6", movement.date)
-        setText(sheet, "AM14", movement.documentNumber)
+        setText(sheet, "W14", movement.documentNumber)
 
-        setText(sheet, "G8", movement.source)
-        setText(sheet, "G10", movement.destination)
+        setText(sheet, "R8", movement.source)
+        setText(sheet, "R10", movement.destination)
 
-        setText(sheet, "A23", movement.typeName)
-        setText(sheet, "V23", movement.serialNumber ?: "")
-        setText(sheet, "AD23", "шт")
-        setText(sheet, "AV23", movement.quantity.toString())
-        setText(sheet, "BD23", movement.quantity.toString())
-        setText(sheet, "CP23", movement.missingParts ?: "")
+        setText(sheet, "A22", movement.typeName)
+        setText(sheet, "R22", movement.serialNumber ?: "")
+        setText(sheet, "AD22", "шт")
+        setText(sheet, "AY22", movement.quantity.toString())
+        setText(sheet, "CP22", movement.missingParts ?: "")
+        setText(sheet, "BE22", movement.quantity.toString())
 
         setText(sheet, "A35", movement.transferredBy)
         setText(sheet, "A41", movement.acceptedBy)
+
 
         val safeDocumentNumber =
             movement.documentNumber
@@ -112,6 +113,50 @@ class DocumentService(
                 ?: row.createCell(colIndex)
 
         cell.setCellValue(value)
+    }
+
+    fun createDebugTemplateMap(): File? {
+        val templateFile = File(templatePath)
+
+        if (!templateFile.exists()) {
+            println("Шаблон накладной не найден: $templatePath")
+            return null
+        }
+
+        val documentsDir = File(outputDir)
+        if (!documentsDir.exists()) {
+            documentsDir.mkdirs()
+        }
+
+        val inputStream = FileInputStream(templateFile)
+        val workbook = XSSFWorkbook(inputStream)
+        val sheet = workbook.getSheetAt(0)
+
+        setText(sheet, "CL6", "DATE")
+        setText(sheet, "AM14", "DOC_NUMBER")
+        setText(sheet, "W14", "DOC_NUMBER_2")
+        setText(sheet, "G8", "FROM")
+        setText(sheet, "G10", "TO")
+        setText(sheet, "A23", "NAME")
+        setText(sheet, "V23", "SERIAL")
+        setText(sheet, "AD23", "UNIT")
+        setText(sheet, "AP23", "QTY_1")
+        setText(sheet, "AV23", "QTY_2")
+        setText(sheet, "BD23", "QTY_3")
+        setText(sheet, "CP23", "COMMENT")
+
+        val outputFile = File(documentsDir, "DEBUG_TEMPLATE_MAP.xlsx")
+
+        val outputStream = FileOutputStream(outputFile)
+        workbook.write(outputStream)
+
+        outputStream.close()
+        workbook.close()
+        inputStream.close()
+
+        println("Файл разметки шаблона создан: ${outputFile.path}")
+
+        return outputFile
     }
 }
 

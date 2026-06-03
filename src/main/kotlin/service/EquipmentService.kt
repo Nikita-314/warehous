@@ -16,6 +16,7 @@ class EquipmentService {
 
     private val items = mutableListOf<EquipmentItem>()
     private val movements = mutableListOf<Movement>()
+    private val groups = mutableListOf<String>()
 
     fun addEquipment(
         typeName: String,
@@ -58,36 +59,50 @@ class EquipmentService {
         inventoryId: String,
         newGroup: String,
         newLocation: String?,
+        transferQuantity: Int,
         date: String,
         documentNumber: String,
         transferredBy: String,
         acceptedBy: String,
-        movementType: MovementType = MovementType.TRANSFER,
-        transferQuantity: Int
-    ) {
+        movementType: MovementType = MovementType.TRANSFER
+    ): Movement? {
         for (index in items.indices) {
             val item = items[index]
 
             if (item.inventoryId == inventoryId) {
                 if (transferQuantity <= 0) {
                     println("Количество для передачи должно быть больше 0")
-                    return
+                    return null
                 }
 
                 if (transferQuantity > item.quantity) {
                     println("Нельзя передать $transferQuantity. Доступно только ${item.quantity}")
-                    return
+                    return null
                 }
 
                 val oldPlace = item.currentGroup ?: "Склад"
-                if (oldPlace == newGroup) {
-                    println("Оборудование $inventoryId уже находится в группе $newGroup")
-                    return
+                val oldLocation = item.currentLocation
+
+                if (
+                    oldPlace == newGroup &&
+                    oldLocation == newLocation
+                ) {
+                    println(
+                        "Оборудование $inventoryId уже находится в группе $newGroup на объекте ${newLocation ?: "-"}"
+                    )
+                    return null
                 }
+
+                val movementInventoryId =
+                    if (transferQuantity == item.quantity) {
+                        item.inventoryId
+                    } else {
+                        generateInventoryId()
+                    }
 
                 val movement = Movement(
                     movementType = movementType,
-                    inventoryId = item.inventoryId,
+                    inventoryId = movementInventoryId,
                     typeName = item.typeName,
                     serialNumber = item.serialNumber,
                     quantity = transferQuantity,
@@ -120,7 +135,7 @@ class EquipmentService {
                     items[index] = remainingItem
 
                     val transferredItem = item.copy(
-                        inventoryId = generateInventoryId(),
+                        inventoryId = movementInventoryId,
                         quantity = transferQuantity,
                         status = EquipmentStatus.IN_GROUP,
                         currentGroup = newGroup,
@@ -131,15 +146,17 @@ class EquipmentService {
                 }
 
                 if (movementType == MovementType.RETURN) {
-                    println("Оборудование $inventoryId возвращено на склад")
+                    println("Оборудование $movementInventoryId возвращено на склад")
                 } else {
-                    println("Оборудование $inventoryId передано в группу $newGroup")
+                    println("Оборудование $movementInventoryId передано в группу $newGroup")
                 }
-                return
+
+                return movement
             }
         }
 
         println("Оборудование с номером $inventoryId не найдено")
+        return null
     }
 
     fun getAllMovements(): List<Movement> {
@@ -212,10 +229,18 @@ class EquipmentService {
         transferredBy: String,
         acceptedBy: String
     ) {
+        val item = findEquipmentById(inventoryId)
+
+        if (item == null) {
+            println("Оборудование с номером $inventoryId не найдено")
+            return
+        }
+
         transferEquipment(
             inventoryId = inventoryId,
             newGroup = "Склад",
             newLocation = null,
+            transferQuantity = item.quantity,
             date = date,
             documentNumber = documentNumber,
             transferredBy = transferredBy,
@@ -418,5 +443,65 @@ class EquipmentService {
         println("Оборудование $inventoryId восстановлено из истории")
 
         return true
+    }
+
+    fun addGroup(name: String): Boolean {
+        if (name.isBlank()) {
+            println("Название подразделения не может быть пустым")
+            return false
+        }
+
+        for (group in groups) {
+            if (group.equals(name, ignoreCase = true)) {
+                println("Подразделение $name уже существует")
+                return false
+            }
+        }
+
+        groups.add(name)
+        println("Подразделение $name добавлено")
+        return true
+    }
+
+    fun getAllGroups(): List<String> {
+        val result = mutableSetOf<String>()
+
+        for (group in groups) {
+            result.add(group)
+        }
+
+        for (item in items) {
+            if (!item.currentGroup.isNullOrBlank()) {
+                result.add(item.currentGroup)
+            }
+        }
+
+        return result.toList()
+    }
+
+    fun deleteGroup(name: String): Boolean {
+        for (item in items) {
+            if (item.currentGroup.equals(name, ignoreCase = true)) {
+                println("Нельзя удалить подразделение $name: за ним числится оборудование")
+                return false
+            }
+        }
+
+        val removed = groups.removeIf {
+            it.equals(name, ignoreCase = true)
+        }
+
+        if (removed) {
+            println("Подразделение $name удалено")
+            return true
+        }
+
+        println("Подразделение $name не найдено")
+        return false
+    }
+
+    fun loadGroups(loadedGroups: List<String>) {
+        groups.clear()
+        groups.addAll(loadedGroups)
     }
 }

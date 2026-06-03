@@ -53,6 +53,11 @@ fun main() {
         loadedMovements = storage.loadMovements()
     )
 
+    equipmentService.loadGroups(
+        storage.loadDepartmentNames()
+    )
+
+
     equipmentService.validateDataIntegrity()
 
     val menu = ConsoleMenu(
