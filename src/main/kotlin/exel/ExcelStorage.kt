@@ -657,4 +657,75 @@ class ExcelStorage(
 
         return result
     }
+
+    fun saveLocationNames(locations: List<String>) {
+        val file = File(fileName)
+
+        val workbook =
+            if (file.exists()) {
+                val inputStream = FileInputStream(file)
+                XSSFWorkbook(inputStream)
+            } else {
+                XSSFWorkbook()
+            }
+
+        val sheetName = "Объекты"
+
+        val oldSheet = workbook.getSheet(sheetName)
+        if (oldSheet != null) {
+            val index = workbook.getSheetIndex(oldSheet)
+            workbook.removeSheetAt(index)
+        }
+
+        val sheet = workbook.createSheet(sheetName)
+
+        val headerRow = sheet.createRow(0)
+        headerRow.createCell(0).setCellValue("Название")
+
+        for (index in locations.indices) {
+            val row = sheet.createRow(index + 1)
+            row.createCell(0).setCellValue(locations[index])
+        }
+
+        val outputStream = FileOutputStream(file)
+        workbook.write(outputStream)
+
+        outputStream.close()
+        workbook.close()
+    }
+
+    fun loadLocationNames(): List<String> {
+        val result = mutableListOf<String>()
+
+        val file = File(fileName)
+
+        if (!file.exists()) {
+            return result
+        }
+
+        val inputStream = FileInputStream(file)
+        val workbook = XSSFWorkbook(inputStream)
+
+        val sheet = workbook.getSheet("Объекты")
+
+        if (sheet == null) {
+            workbook.close()
+            inputStream.close()
+            return result
+        }
+
+        for (rowIndex in 1..sheet.lastRowNum) {
+            val row = sheet.getRow(rowIndex) ?: continue
+            val name = readString(row, 0)
+
+            if (name.isNotBlank()) {
+                result.add(name)
+            }
+        }
+
+        workbook.close()
+        inputStream.close()
+
+        return result
+    }
 }

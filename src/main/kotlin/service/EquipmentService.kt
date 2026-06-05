@@ -17,6 +17,7 @@ class EquipmentService {
     private val items = mutableListOf<EquipmentItem>()
     private val movements = mutableListOf<Movement>()
     private val groups = mutableListOf<String>()
+    private val locations = mutableListOf<String>()
 
     fun addEquipment(
         typeName: String,
@@ -503,5 +504,65 @@ class EquipmentService {
     fun loadGroups(loadedGroups: List<String>) {
         groups.clear()
         groups.addAll(loadedGroups)
+    }
+
+    fun addLocation(name: String): Boolean {
+        if (name.isBlank()) {
+            println("Название объекта не может быть пустым")
+            return false
+        }
+
+        for (location in locations) {
+            if (location.equals(name, ignoreCase = true)) {
+                println("Объект $name уже существует")
+                return false
+            }
+        }
+
+        locations.add(name)
+        println("Объект $name добавлен")
+        return true
+    }
+
+    fun deleteLocation(name: String): Boolean {
+        for (item in items) {
+            if (item.currentLocation.equals(name, ignoreCase = true)) {
+                println("Нельзя удалить объект $name: на нём числится оборудование")
+                return false
+            }
+        }
+
+        val removed = locations.removeIf {
+            it.equals(name, ignoreCase = true)
+        }
+
+        if (removed) {
+            println("Объект $name удалён")
+            return true
+        }
+
+        println("Объект $name не найден")
+        return false
+    }
+
+    fun getAllLocations(): List<String> {
+        val result = mutableSetOf<String>()
+
+        for (location in locations) {
+            result.add(location)
+        }
+
+        for (item in items) {
+            if (!item.currentLocation.isNullOrBlank()) {
+                result.add(item.currentLocation)
+            }
+        }
+
+        return result.toList()
+    }
+
+    fun loadLocations(loadedLocations: List<String>) {
+        locations.clear()
+        locations.addAll(loadedLocations)
     }
 }

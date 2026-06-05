@@ -57,6 +57,10 @@ fun main() {
         storage.loadDepartmentNames()
     )
 
+    equipmentService.loadLocations(
+        storage.loadLocationNames()
+    )
+
 
     equipmentService.validateDataIntegrity()
 

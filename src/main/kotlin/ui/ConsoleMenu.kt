@@ -36,6 +36,7 @@ class ConsoleMenu(
             println("14. Восстановить ${settings.equipmentTitle.lowercase()} из истории")
             println("15. Управление настройками")
             println("16. Управление подразделениями")
+            println("17. Управление объектами")
             println("0. Выход")
             print("Выберите действие: ")
 
@@ -58,6 +59,7 @@ class ConsoleMenu(
                 "14" -> restoreEquipment()
                 "15" -> editSettings()
                 "16" -> manageGroups()
+                "17" -> manageLocations()
 
 
                 "0" -> {
@@ -104,7 +106,13 @@ class ConsoleMenu(
             val group = item.currentGroup ?: "Склад"
             val location = item.currentLocation ?: "-"
 
-            println("${item.inventoryId} | ${item.typeName} | ${item.quantity} шт. | ${group} | ${location}")
+            println(
+                "${item.inventoryId} | " +
+                        "${item.typeName} | " +
+                        "${item.quantity} шт. | " +
+                        "$group | " +
+                        location
+            )
         }
     }
 
@@ -122,20 +130,31 @@ class ConsoleMenu(
     private fun transferEquipment() {
         println()
 
-        print("Введите инвентарный номер: ")
-        val inventoryId = readln()
+        val inventoryId = selectEquipmentForOperation()
 
-        print("Введите группу: ")
-        val group = readln()
+        if (inventoryId == null) {
+            println("Передача отменена")
+            return
+        }
 
-        print("Введите объект: ")
-        val location = readln()
+        val group = selectGroup()
+
+        if (group == null) {
+            println("Передача отменена")
+            return
+        }
+
+        val location = selectLocation()
 
         print("Введите количество для передачи: ")
         val quantity = readln().toInt()
 
         print("Введите номер накладной: ")
         val documentNumber = readln()
+        if (documentNumber.isBlank()) {
+            println("Номер накладной обязателен")
+            return
+        }
 
         print("Кто передал: ")
         val transferredBy = readln()
@@ -223,7 +242,6 @@ class ConsoleMenu(
             println()
         }
     }
-
 
     private fun returnEquipment() {
         println()
@@ -435,6 +453,9 @@ class ConsoleMenu(
         storage.saveDepartmentNames(
             equipmentService.getAllGroups()
         )
+        storage.saveLocationNames(
+            equipmentService.getAllLocations()
+        )
     }
 
     private fun searchByName() {
@@ -597,6 +618,200 @@ class ConsoleMenu(
                 else -> println("Неизвестная команда")
             }
         }
+    }
+
+    private fun selectGroup(): String? {
+        val groups = equipmentService.getAllGroups()
+
+        if (groups.isEmpty()) {
+            println("Справочник подразделений пуст")
+            return null
+        }
+
+        println("Выберите подразделение:")
+
+        for ((index, group) in groups.withIndex()) {
+            println("${index + 1}. $group")
+        }
+
+        print("Введите номер подразделения: ")
+
+        val input = readln()
+        val number = input.toIntOrNull()
+
+        if (number == null) {
+            println("Нужно ввести число")
+            return null
+        }
+
+        if (number < 1 || number > groups.size) {
+            println("Нет подразделения с таким номером")
+            return null
+        }
+
+        return groups[number - 1]
+    }
+
+    private fun manageLocations() {
+        while (true) {
+            println()
+            println("=== Объекты ===")
+
+            val locations = equipmentService.getAllLocations()
+
+            if (locations.isEmpty()) {
+                println("Справочник пуст")
+            } else {
+                println("Список объектов:")
+
+                for ((index, location) in locations.withIndex()) {
+                    println("${index + 1}. $location")
+                }
+            }
+
+            println()
+            println("1. Добавить объект")
+            println("2. Удалить объект")
+            println("0. Назад")
+            print("Выберите действие: ")
+
+            when (readln()) {
+                "1" -> {
+                    print("Введите название нового объекта: ")
+                    val name = readln()
+
+                    val success = equipmentService.addLocation(name)
+
+                    if (success) {
+                        saveAll()
+                    }
+                }
+
+                "2" -> {
+                    print("Введите название объекта для удаления: ")
+                    val name = readln()
+
+                    val success = equipmentService.deleteLocation(name)
+
+                    if (success) {
+                        saveAll()
+                    }
+                }
+
+                "0" -> return
+
+                else -> println("Неизвестная команда")
+            }
+        }
+    }
+
+    private fun selectLocation(): String? {
+        val locations = equipmentService.getAllLocations()
+
+        if (locations.isEmpty()) {
+            println("Справочник объектов пуст")
+            println("Объект не будет указан")
+            return null
+        }
+
+        println("Выберите объект:")
+        println("0. Не указывать объект")
+
+        for ((index, location) in locations.withIndex()) {
+            println("${index + 1}. $location")
+        }
+
+        print("Введите номер объекта: ")
+
+        val input = readln()
+        val number = input.toIntOrNull()
+
+        if (number == null) {
+            println("Нужно ввести число")
+            return null
+        }
+
+        if (number == 0) {
+            return null
+        }
+
+        if (number < 1 || number > locations.size) {
+            println("Нет объекта с таким номером")
+            return null
+        }
+
+        return locations[number - 1]
+    }
+
+    private fun selectEquipmentForOperation(): String? {
+        println()
+
+        print("Введите инвентарный номер, серийный номер или часть названия: ")
+        val query = readln()
+
+        if (query.isBlank()) {
+            println("Поиск не может быть пустым")
+            return null
+        }
+
+        val items = equipmentService.getAllItems()
+        val foundItems = mutableListOf<model.EquipmentItem>()
+
+        for (item in items) {
+            val inventoryMatches =
+                item.inventoryId.equals(query, ignoreCase = true)
+
+            val serialMatches =
+                item.serialNumber?.equals(query, ignoreCase = true) ?: false
+
+            val nameMatches =
+                item.typeName.contains(query, ignoreCase = true)
+
+            if (inventoryMatches || serialMatches || nameMatches) {
+                foundItems.add(item)
+            }
+        }
+
+        if (foundItems.isEmpty()) {
+            println("Ничего не найдено")
+            return null
+        }
+
+        if (foundItems.size == 1) {
+            val item = foundItems[0]
+            println("Найдено: ${item.inventoryId} | ${item.typeName} | ${item.quantity} шт.")
+            return item.inventoryId
+        }
+
+        println("Найдено несколько вариантов:")
+
+        for ((index, item) in foundItems.withIndex()) {
+            val group = item.currentGroup ?: settings.warehouseTitle
+            val location = item.currentLocation ?: "-"
+
+            println(
+                "${index + 1}. ${item.inventoryId} | " +
+                        "${item.typeName} | " +
+                        "${item.serialNumber ?: "-"} | " +
+                        "${item.quantity} шт. | " +
+                        "$group | $location"
+            )
+        }
+
+        print("Выберите номер из списка: ")
+        val selectedIndex = readln().toIntOrNull()
+
+        if (selectedIndex == null) {
+            println("Нужно ввести число")
+            return null
+        }
+
+        if (selectedIndex < 1 || selectedIndex > foundItems.size) {
+            println("Нет такого варианта")
+            return null
+        }
+
+        return foundItems[selectedIndex - 1].inventoryId
     }
 }
 
