@@ -151,10 +151,6 @@ class ConsoleMenu(
 
         print("Введите номер накладной: ")
         val documentNumber = readln()
-        if (documentNumber.isBlank()) {
-            println("Номер накладной обязателен")
-            return
-        }
 
         print("Кто передал: ")
         val transferredBy = readln()
@@ -174,9 +170,14 @@ class ConsoleMenu(
         )
 
         if (movement != null) {
-            documentService.createTransferDocument(movement)
+
+            if (documentNumber.isNotBlank()) {
+                documentService.createTransferDocument(movement)
+            }
+
             saveAll()
             println("Передача завершена")
+
         } else {
             println("Передача не выполнена")
         }

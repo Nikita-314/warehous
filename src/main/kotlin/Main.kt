@@ -15,14 +15,27 @@ fun main() = application {
     val loadedEquipment: List<EquipmentItem> =
         storage.loadEquipment()
 
+    val movements =
+        storage.loadMovements()
+
     val items: List<EquipmentRow> =
         loadedEquipment.map { item ->
+            val lastMovement =
+                movements.lastOrNull { movement ->
+                    movement.inventoryId == item.inventoryId
+                }
+
             EquipmentRow(
                 inventoryId = item.inventoryId,
                 name = item.typeName,
                 quantity = item.quantity,
                 group = item.currentGroup ?: "Склад",
-                location = item.currentLocation ?: "-"
+                location = item.currentLocation ?: "-",
+                lastMovementDate = lastMovement?.date ?: "-",
+                lastDocumentNumber = lastMovement?.documentNumber ?: "-",
+                lastTransferredBy = lastMovement?.transferredBy ?: "-",
+                lastAcceptedBy = lastMovement?.acceptedBy ?: "-",
+                lastSource = lastMovement?.source ?: "-"
             )
         }
 
@@ -39,7 +52,12 @@ data class EquipmentRow(
     val name: String,
     val quantity: Int,
     val group: String,
-    val location: String
+    val location: String,
+    val lastMovementDate: String,
+    val lastDocumentNumber: String,
+    val lastTransferredBy: String,
+    val lastAcceptedBy: String,
+    val lastSource: String
 )
 
 @Composable
@@ -90,6 +108,7 @@ fun App(items: List<EquipmentRow>) {
             ) {
                 var searchText by remember { mutableStateOf("") }
                 var selectedItem by remember { mutableStateOf<EquipmentRow?>(null) }
+                var message by remember { mutableStateOf("") }
 
                 TextField(
                     value = searchText,
@@ -145,6 +164,12 @@ fun App(items: List<EquipmentRow>) {
 
                     Spacer(modifier = Modifier.height(4.dp))
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (message.isNotBlank()) {
+                    Text(message)
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 if (selectedItem != null) {
@@ -162,8 +187,20 @@ fun App(items: List<EquipmentRow>) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    Text("Последнее движение")
+                    Text("Дата: ${item.lastMovementDate}")
+                    Text("Накладная: ${item.lastDocumentNumber}")
+                    Text("Передал: ${if (item.lastTransferredBy.isBlank()) "-" else item.lastTransferredBy} (${item.lastSource})")
+                    Text("Принял: ${if (item.lastAcceptedBy.isBlank()) "-" else item.lastAcceptedBy}")
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Row {
-                        Button(onClick = {}) {
+                        Button(
+                            onClick = {
+                                message = "Нажата передача для ${item.inventoryId}"
+                            }
+                        ) {
                             Text("Передать")
                         }
 
@@ -178,86 +215,15 @@ fun App(items: List<EquipmentRow>) {
                         Button(onClick = {}) {
                             Text("История")
                         }
+
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (message.isNotBlank()) {
+                        Text(message)
                     }
                 }
             }
-
         }
     }
 }
-
-
-//import model.EquipmentItem
-//import model.EquipmentStatus
-//import model.CompletenessStatus
-//import model.Movement
-//import model.AppSettings
-//import service.EquipmentCatalogService
-//import service.GroupCatalogService
-//import service.EquipmentService
-//import kotlin.time.Clock
-//import excel.ExcelStorage
-//import ui.ConsoleMenu
-//
-//
-//fun main() {
-//    val storage = ExcelStorage()
-//
-//    val loadedSettings = storage.loadSettings()
-//
-//    val settings =
-//        if (loadedSettings == null) {
-//            println("Первый запуск программы. Нужно настроить названия.")
-//
-//            print("Как назвать главное место учёта? Например: Склад, Лаборатория: ")
-//            val warehouseTitle = readln()
-//
-//            print("Как назвать учитываемые объекты? Например: Оборудование, Материалы: ")
-//            val equipmentTitle = readln()
-//
-//            print("Как назвать получателей? Например: Группа, Техпомещение: ")
-//            val groupTitle = readln()
-//
-//            print("Как назвать местоположение? Например: Объект, Город: ")
-//            val locationTitle = readln()
-//
-//            val newSettings = AppSettings(
-//                warehouseTitle = warehouseTitle,
-//                equipmentTitle = equipmentTitle,
-//                groupTitle = groupTitle,
-//                locationTitle = locationTitle
-//            )
-//
-//            storage.saveSettings(newSettings)
-//
-//            newSettings
-//        } else {
-//            loadedSettings
-//        }
-//
-//    val equipmentService = EquipmentService()
-//
-//    equipmentService.loadInitialData(
-//        loadedItems = storage.loadEquipment(),
-//        loadedMovements = storage.loadMovements()
-//    )
-//
-//    equipmentService.loadGroups(
-//        storage.loadDepartmentNames()
-//    )
-//
-//    equipmentService.loadLocations(
-//        storage.loadLocationNames()
-//    )
-//
-//
-//    equipmentService.validateDataIntegrity()
-//
-//    val menu = ConsoleMenu(
-//        equipmentService = equipmentService,
-//        storage = storage,
-//        settings = settings
-//    )
-//
-//    menu.start()
-//}
